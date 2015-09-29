@@ -3452,11 +3452,6 @@ void Monitor::_ms_dispatch(Message *m)
       return;
     }
 
-    if (!exited_quorum.is_zero() && !src_is_mon) {
-      waitlist_or_zap_client(op);
-      return;
-    }
-
     dout(10) << "do not have session, making new one" << dendl;
     s = session_map.new_session(m->get_source_inst(), m->get_connection().get());
     assert(s);
@@ -3493,7 +3488,9 @@ void Monitor::_ms_dispatch(Message *m)
   }
   dout(20) << " caps " << s->caps.get_str() << dendl;
 
-  if (is_synchronizing() && !src_is_mon) {
+  if ((is_synchronizing() ||
+       (s->global_id == 0 && !exited_quorum.is_zero())) &&
+      !src_is_mon) {
     waitlist_or_zap_client(op);
   } else {
     dispatch_op(op);
